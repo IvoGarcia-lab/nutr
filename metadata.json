@@ -1,0 +1,5 @@
+{
+  "name": "Plataforma de Nutrição com IA",
+  "description": "Uma plataforma inteligente que utiliza a IA do Gemini para criar planos de nutrição personalizados. Insira os seus dados para gerar um plano diário detalhado e analise as suas refeições através de fotos para obter uma estimativa nutricional.",
+  "requestFramePermissions": []
+}
