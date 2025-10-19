@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { User, UserData } from '../types';
-import { updateUser } from '../services/mockAuthService';
+import React, { useState, useEffect } from 'react';
+import { User } from '../types';
+import { updateProfile } from '../services/supabaseService';
 import Input from './ui/Input';
 import Select from './ui/Select';
 import Button from './ui/Button';
@@ -15,21 +15,17 @@ interface ProfileScreenProps {
 }
 
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogout, onProfileUpdate }) => {
-  const [formData, setFormData] = useState<UserData>({
-    age: user.age,
-    gender: user.gender,
-    weight: user.weight,
-    height: user.height,
-    activityLevel: user.activityLevel,
-    goal: user.goal,
-    dietaryPreference: user.dietaryPreference,
-  });
+  const [formData, setFormData] = useState<User>({ ...user });
   const [isLoading, setIsLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  useEffect(() => {
+    setFormData(user);
+  }, [user]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: name === 'age' || name === 'weight' || name === 'height' ? parseFloat(value) : value }));
+    setFormData(prev => ({ ...prev, [name]: name === 'age' || name === 'weight' || name === 'height' ? parseFloat(value) || 0 : value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -37,8 +33,9 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogout, onProfile
     setIsLoading(true);
     setSuccessMessage('');
     try {
-      const updatedUser = await updateUser(formData);
-      onProfileUpdate(updatedUser);
+      const { id, email, ...profileData } = formData;
+      await updateProfile(user.id, profileData);
+      onProfileUpdate(formData);
       setSuccessMessage('Perfil atualizado com sucesso!');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {

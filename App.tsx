@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import NutritionForm from './components/NutritionForm';
 import PlanDashboard from './components/PlanDashboard';
 import ImageAnalyzer from './components/ImageAnalyzer';
@@ -10,9 +10,10 @@ import ChatAssistant from './components/ChatAssistant';
 import WeeklyPlanView from './components/WeeklyPlanView';
 import ShoppingListView from './components/ShoppingListView';
 import { generateNutritionPlan, analyzeMealImages, generateShoppingListFromPlan } from './services/geminiService';
+import * as supabaseService from './services/supabaseService';
 import { NutritionPlan, UserData, MealAnalysis, CompletedMeals, PlanHistoryItem, WeightEntry, User, WeeklyPlan, ShoppingList, DayOfWeek } from './types';
-import * as mockAuth from './services/mockAuthService';
 import Loader from './components/ui/Loader';
+import { Session } from '@supabase/supabase-js';
 
 type View = 'dashboard' | 'form' | 'analyzer' | 'history' | 'progress' | 'profile' | 'assistant' | 'weekly' | 'shopping';
 
@@ -27,9 +28,10 @@ const dayTranslations: Record<DayOfWeek, string> = {
 };
 
 const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(mockAuth.getCurrentUser());
+  const [session, setSession] = useState<Session | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAppLoading, setIsAppLoading] = useState(true);
   
-  // State is now managed by the mock service to better simulate a backend
   const [currentPlan, setCurrentPlan] = useState<NutritionPlan | null>(null);
   const [planHistory, setPlanHistory] = useState<PlanHistoryItem[]>([]);
   const [weightHistory, setWeightHistory] = useState<WeightEntry[]>([]);
@@ -44,24 +46,57 @@ const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
 
   useEffect(() => {
-    if (currentUser) {
-      // Load all data for the logged-in user
-      const userData = mockAuth.getUserData(currentUser.id);
-      if(userData) {
-        setCurrentPlan(userData.currentPlan);
-        setPlanHistory(userData.planHistory);
-        setWeightHistory(userData.weightHistory);
-        setCompletedMeals(userData.completedMeals);
-        setWeeklyPlan(userData.weeklyPlan);
-        setShoppingList(userData.shoppingList);
-        setActiveView(userData.currentPlan ? 'dashboard' : 'form');
-      }
-    }
-  }, [currentUser]);
+    supabaseService.getSession().then((session) => {
+      setSession(session);
+      setIsAppLoading(false);
+    });
 
-  const saveDataForCurrentUser = () => {
+    const subscription = supabaseService.onAuthStateChange((session) => {
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const resetAllData = () => {
+      setCurrentPlan(null);
+      setPlanHistory([]);
+      setWeightHistory([]);
+      setCompletedMeals({ breakfast: false, lunch: false, dinner: false, snacks: false });
+      setWeeklyPlan(null);
+      setShoppingList(null);
+      setMealAnalyses(null);
+      setActiveView('form');
+  };
+
+  useEffect(() => {
+    if (session?.user) {
+      setIsAppLoading(true);
+      supabaseService.getFullUserData(session.user.id).then(data => {
+        if (data) {
+          setCurrentUser(data.user);
+          const { allData } = data;
+          setCurrentPlan(allData.currentPlan);
+          setPlanHistory(allData.planHistory);
+          setWeightHistory(allData.weightHistory);
+          setCompletedMeals(allData.completedMeals);
+          setWeeklyPlan(allData.weeklyPlan);
+          setShoppingList(allData.shoppingList);
+          setActiveView(allData.currentPlan ? 'dashboard' : 'form');
+        }
+        setIsAppLoading(false);
+      });
+    } else {
+      setCurrentUser(null);
+      resetAllData();
+    }
+  }, [session]);
+
+  const saveDataForCurrentUser = useCallback(() => {
     if (currentUser) {
-      mockAuth.saveUserData(currentUser.id, {
+      supabaseService.updateProfile(currentUser.id, {
         currentPlan,
         planHistory,
         weightHistory,
@@ -70,18 +105,21 @@ const App: React.FC = () => {
         shoppingList
       });
     }
-  };
+  }, [currentUser, currentPlan, planHistory, weightHistory, completedMeals, weeklyPlan, shoppingList]);
   
-  // Save data whenever it changes
   useEffect(() => {
-    saveDataForCurrentUser();
-  }, [currentPlan, planHistory, weightHistory, completedMeals, weeklyPlan, shoppingList]);
+    // This effect will save data to Supabase whenever it changes.
+    // In a real-world app, you might want to debounce this to avoid too many writes.
+    if (!isAppLoading) {
+        saveDataForCurrentUser();
+    }
+  }, [saveDataForCurrentUser, isAppLoading]);
 
   const handleApiError = (err: unknown, context: string) => {
       let errorMessage = `Ocorreu um erro ao ${context}. Por favor, tente novamente.`;
       if (err instanceof Error) {
           if (err.message.includes('API key not valid')) {
-              errorMessage = 'A sua chave de API do Gemini parece ser inválida. Por favor, verifique o seu ficheiro .env.local e certifique-se de que a GEMINI_API_KEY está correta.';
+              errorMessage = 'A sua chave de API do Gemini parece ser inválida. Por favor, verifique os seus segredos.';
           } else {
               errorMessage = `Ocorreu um erro ao ${context}: ${err.message}`;
           }
@@ -90,23 +128,13 @@ const App: React.FC = () => {
       console.error(err);
   };
 
-  const handleLoginSuccess = (user: User) => {
-    setCurrentUser(user);
-  };
-  
   const handleLogout = async () => {
-    await mockAuth.logout();
-    setCurrentUser(null);
-    setCurrentPlan(null);
-    setPlanHistory([]);
-    setWeightHistory([]);
-    setCompletedMeals({ breakfast: false, lunch: false, dinner: false, snacks: false });
-    setWeeklyPlan(null);
-    setShoppingList(null);
+    await supabaseService.logout();
   };
   
   const handleProfileUpdate = (updatedUser: User) => {
     setCurrentUser(updatedUser);
+    // The profile data itself is saved via a separate call in the ProfileScreen component
   };
 
   const handlePlanGeneration = async (userData: UserData) => {
@@ -212,8 +240,12 @@ const App: React.FC = () => {
     setShoppingList(newList);
   };
 
+  if (isAppLoading) {
+    return <div className="min-h-screen flex items-center justify-center"><Loader className="h-10 w-10 text-emerald-500 animate-spin" /></div>;
+  }
+
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={handleLoginSuccess} />;
+    return <LoginScreen />;
   }
 
   const renderContent = () => {
