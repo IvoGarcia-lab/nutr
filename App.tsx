@@ -77,6 +77,19 @@ const App: React.FC = () => {
     saveDataForCurrentUser();
   }, [currentPlan, planHistory, weightHistory, completedMeals, weeklyPlan, shoppingList]);
 
+  const handleApiError = (err: unknown, context: string) => {
+      let errorMessage = `Ocorreu um erro ao ${context}. Por favor, tente novamente.`;
+      if (err instanceof Error) {
+          if (err.message.includes('API key not valid')) {
+              errorMessage = 'A sua chave de API do Gemini parece ser inválida. Por favor, verifique o seu ficheiro .env.local e certifique-se de que a GEMINI_API_KEY está correta.';
+          } else {
+              errorMessage = `Ocorreu um erro ao ${context}: ${err.message}`;
+          }
+      }
+      setError(errorMessage);
+      console.error(err);
+  };
+
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
   };
@@ -108,8 +121,7 @@ const App: React.FC = () => {
       setCompletedMeals({ breakfast: false, lunch: false, dinner: false, snacks: false });
       setActiveView('dashboard');
     } catch (err) {
-      setError('Ocorreu um erro ao gerar o plano. Por favor, tente novamente.');
-      console.error(err);
+      handleApiError(err, 'gerar o plano');
     } finally {
       setIsLoading(false);
     }
@@ -139,8 +151,7 @@ const App: React.FC = () => {
       setActiveView('weekly');
 
     } catch (err) {
-      setError('Ocorreu um erro ao gerar o plano semanal.');
-      console.error(err);
+      handleApiError(err, 'gerar o plano semanal');
     } finally {
       setIsLoading(false);
     }
@@ -157,8 +168,7 @@ const App: React.FC = () => {
       setShoppingList(list);
       setActiveView('shopping');
     } catch (err) {
-      setError('Ocorreu um erro ao gerar a lista de compras.');
-      console.error(err);
+      handleApiError(err, 'gerar a lista de compras');
     } finally {
       setIsLoading(false);
     }
@@ -174,8 +184,7 @@ const App: React.FC = () => {
       const analyses = await analyzeMealImages(images);
       setMealAnalyses(analyses);
     } catch (err) {
-      setError('Ocorreu um erro ao analisar a imagem. Por favor, tente novamente.');
-      console.error(err);
+      handleApiError(err, 'analisar a imagem');
     } finally {
       setIsLoading(false);
     }
