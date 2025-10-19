@@ -99,7 +99,7 @@ export const getFullUserData = async (userId: string): Promise<{ user: User, all
     return { user: appUser, allData: allUserData };
 };
 
-export const updateProfile = async (userId: string, data: Partial<AllUserData & UserData>) => {
+export const updateProfile = async (userId: string, data: Partial<AllUserData & User>) => {
     const profileData = {
         name: data.name,
         age: data.age,
