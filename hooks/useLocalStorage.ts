@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Dispatch, SetStateAction } from 'react';
 
 function getValueFromStorage<T>(key: string, initialValue: T): T {
     if (typeof window === 'undefined') {
@@ -13,7 +13,7 @@ function getValueFromStorage<T>(key: string, initialValue: T): T {
     }
 }
 
-export function useLocalStorage<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+export function useLocalStorage<T>(key: string, initialValue: T): [T, Dispatch<SetStateAction<T>>] {
     const [storedValue, setStoredValue] = useState<T>(() => getValueFromStorage(key, initialValue));
 
     useEffect(() => {

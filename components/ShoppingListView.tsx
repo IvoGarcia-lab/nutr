@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingList, ShoppingListItem } from '../types';
+import { ShoppingList, ShoppingListItem as ShoppingListItemType } from '../types';
 import Card from './ui/Card';
 
 interface ShoppingListViewProps {
@@ -7,7 +7,7 @@ interface ShoppingListViewProps {
     onItemToggle: (itemName: string) => void;
 }
 
-const ShoppingListItem: React.FC<{ item: ShoppingListItem, onToggle: (name: string) => void }> = ({ item, onToggle }) => {
+const ShoppingListItem: React.FC<{ item: ShoppingListItemType, onToggle: (name: string) => void }> = ({ item, onToggle }) => {
     return (
         <label htmlFor={`item-${item.name}`} className={`flex items-center space-x-3 p-3 cursor-pointer hover:bg-emerald-50 rounded-lg transition-colors ${item.completed ? 'opacity-60' : ''}`}>
             <input
@@ -34,7 +34,7 @@ const ShoppingListView: React.FC<ShoppingListViewProps> = ({ shoppingList, onIte
         }
         acc[category].push(item);
         return acc;
-    }, {} as Record<string, ShoppingListItem[]>);
+    }, {} as Record<string, ShoppingListItemType[]>);
     
     const categories = Object.keys(groupedItems).sort();
     

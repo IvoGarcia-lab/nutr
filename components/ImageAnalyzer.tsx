@@ -69,7 +69,7 @@ const ImageAnalyzer: React.FC<ImageAnalyzerProps> = ({ onAnalyze, analyses, isLo
             setSelectedFiles(files);
             
             previewUrls.forEach(url => URL.revokeObjectURL(url));
-            const newUrls = files.map(file => URL.createObjectURL(file));
+            const newUrls = files.map((file: File) => URL.createObjectURL(file));
             setPreviewUrls(newUrls);
         }
     };
