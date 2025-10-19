@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User, UserData } from '../types';
 import { updateUser } from '../services/mockAuthService';
@@ -7,6 +6,7 @@ import Select from './ui/Select';
 import Button from './ui/Button';
 import Card from './ui/Card';
 import Loader from './ui/Loader';
+import { LogOut } from 'lucide-react';
 
 interface ProfileScreenProps {
   user: User;
@@ -52,7 +52,10 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ user, onLogout, onProfile
     <div className="space-y-8 animate-fade-in">
         <div className="flex justify-between items-center">
             <h2 className="text-3xl font-bold text-gray-800">O seu Perfil</h2>
-            <Button onClick={onLogout} variant="secondary">Terminar Sessão</Button>
+            <Button onClick={onLogout} variant="secondary">
+                <LogOut className="mr-2 h-4 w-4" />
+                Terminar Sessão
+            </Button>
         </div>
         
         <Card>
